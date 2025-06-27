@@ -1,0 +1,104 @@
+2025-05-07 20:03:18 | INFO | controller | args: Namespace(host='0.0.0.0', port=8081, model_path='tencent/Hunyuan3D-2mini', tex_model_path='tencent/Hunyuan3D-2', device='cuda', limit_model_concurrency=5, enable_tex=False)
+2025-05-07 20:03:18 | INFO | controller | Loading the model tencent/Hunyuan3D-2mini on worker 018569 ...
+2025-05-07 20:03:20 | INFO | hy3dgen.shapgen | Try to load model from local path: C:\Users\USER/.cache/hy3dgen\tencent/Hunyuan3D-2mini\hunyuan3d-dit-v2-mini-turbo
+2025-05-07 20:03:20 | INFO | hy3dgen.shapgen | Model path not exists, try to download from huggingface
+2025-05-07 20:03:20 | ERROR | stderr | Fetching 3 files:   0%|                                                                          | 0/3 [00:00<?, ?it/s]
+2025-05-07 20:03:21 | ERROR | stderr | 
+2025-05-07 20:03:21 | ERROR | stderr | model.fp16.ckpt:   0%|                                                                     | 0.00/3.82G [00:00<?, ?B/s]
+2025-05-07 20:03:21 | ERROR | stderr | [A
+2025-05-07 20:03:21 | ERROR | stderr | 
+2025-05-07 20:03:21 | ERROR | stderr | 
+2025-05-07 20:03:21 | ERROR | stderr | config.yaml:   0%|                                                                         | 0.00/1.66k [00:00<?, ?B/s]
+2025-05-07 20:03:21 | ERROR | stderr | [A[A
+2025-05-07 20:03:21 | ERROR | stderr | config.yaml: 100%|████████████████████████████████████████████████████████████████████████| 1.66k/1.66k [00:00<?, ?B/s]
+2025-05-07 20:03:21 | ERROR | stderr | 
+2025-05-07 20:03:21 | ERROR | stderr | C:\3D\hunyuan3d\Hunyuan3D-2\env\Lib\site-packages\huggingface_hub\file_download.py:143: UserWarning: `huggingface_hub` cache-system uses symlinks by default to efficiently store duplicated files but your machine does not support them in C:\Users\USER\.cache\huggingface\hub\models--tencent--Hunyuan3D-2mini. Caching files will still work but in a degraded version that might require more space on your disk. This warning can be disabled by setting the `HF_HUB_DISABLE_SYMLINKS_WARNING` environment variable. For more details, see https://huggingface.co/docs/huggingface_hub/how-to-cache#limitations.
+2025-05-07 20:03:21 | ERROR | stderr | To support symlinks on Windows, you either need to activate Developer Mode or to run Python as an administrator. In order to activate developer mode, see this article: https://docs.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development
+2025-05-07 20:03:21 | ERROR | stderr |   warnings.warn(message)
+2025-05-07 20:03:21 | ERROR | stderr | Fetching 3 files:  33%|██████████████████████                                            | 1/3 [00:00<00:00,  2.20it/s]
+2025-05-07 20:03:21 | ERROR | stderr | 
+2025-05-07 20:03:21 | ERROR | stderr | 
+2025-05-07 20:03:21 | ERROR | stderr | model.fp16.safetensors:   0%|                                                              | 0.00/3.82G [00:00<?, ?B/s]
+2025-05-07 20:03:21 | ERROR | stderr | [A[A
+2025-05-07 20:03:24 | ERROR | stderr | 
+2025-05-07 20:03:24 | ERROR | stderr | model.fp16.ckpt:   0%|▏                                                           | 10.5M/3.82G [00:03<18:11, 3.49MB/s]
+2025-05-07 20:03:24 | ERROR | stderr | [A
+2025-05-07 20:03:26 | ERROR | stderr | 
+2025-05-07 20:03:26 | ERROR | stderr | model.fp16.ckpt:   1%|▎                                                           | 21.0M/3.82G [00:05<16:09, 3.92MB/s]
+2025-05-07 20:03:26 | ERROR | stderr | [A
+2025-05-07 20:03:28 | ERROR | stderr | 
+2025-05-07 20:03:28 | ERROR | stderr | model.fp16.ckpt:   1%|▍                                                           | 31.5M/3.82G [00:07<15:20, 4.12MB/s]
+2025-05-07 20:03:28 | ERROR | stderr | [A
+2025-05-07 20:03:31 | ERROR | stderr | 
+2025-05-07 20:03:31 | ERROR | stderr | model.fp16.ckpt:   1%|▋                                                           | 41.9M/3.82G [00:10<15:15, 4.13MB/s]
+2025-05-07 20:03:31 | ERROR | stderr | [A
+2025-05-07 20:03:33 | ERROR | stderr | 
+2025-05-07 20:03:33 | ERROR | stderr | model.fp16.ckpt:   1%|▊                                                           | 52.4M/3.82G [00:12<14:56, 4.21MB/s]
+2025-05-07 20:03:33 | ERROR | stderr | [A
+2025-05-07 20:03:37 | ERROR | stderr | 
+2025-05-07 20:03:37 | ERROR | stderr | model.fp16.ckpt:   2%|▉                                                           | 62.9M/3.82G [00:16<18:02, 3.47MB/s]
+2025-05-07 20:03:37 | ERROR | stderr | [A
+2025-05-07 20:03:41 | ERROR | stderr | 
+2025-05-07 20:03:41 | ERROR | stderr | model.fp16.ckpt:   2%|█▏                                                          | 73.4M/3.82G [00:20<18:52, 3.31MB/s]
+2025-05-07 20:03:41 | ERROR | stderr | [A
+2025-05-07 20:03:46 | ERROR | stderr | 
+2025-05-07 20:03:46 | ERROR | stderr | model.fp16.ckpt:   2%|█▎                                                          | 83.9M/3.82G [00:25<21:53, 2.85MB/s]
+2025-05-07 20:03:46 | ERROR | stderr | [A
+2025-05-07 20:03:48 | ERROR | stderr | 
+2025-05-07 20:03:48 | ERROR | stderr | 
+2025-05-07 20:03:48 | ERROR | stderr | model.fp16.safetensors:   0%|▏                                                   | 10.5M/3.82G [00:27<2:44:00, 387kB/s]
+2025-05-07 20:03:48 | ERROR | stderr | [A[A
+2025-05-07 20:03:52 | ERROR | stderr | 
+2025-05-07 20:03:52 | ERROR | stderr | model.fp16.ckpt:   2%|█▍                                                          | 94.4M/3.82G [00:31<26:43, 2.32MB/s]
+2025-05-07 20:03:52 | ERROR | stderr | [A
+2025-05-07 20:03:56 | ERROR | stderr | 
+2025-05-07 20:03:56 | ERROR | stderr | model.fp16.ckpt:   3%|█▋                                                           | 105M/3.82G [00:35<26:33, 2.33MB/s]
+2025-05-07 20:03:56 | ERROR | stderr | [A
+2025-05-07 20:03:58 | ERROR | stderr | 
+2025-05-07 20:03:58 | ERROR | stderr | 
+2025-05-07 20:03:58 | ERROR | stderr | model.fp16.safetensors:   1%|▎                                                   | 21.0M/3.82G [00:37<1:44:59, 603kB/s]
+2025-05-07 20:03:58 | ERROR | stderr | [A[A
+2025-05-07 20:04:03 | ERROR | stderr | 
+2025-05-07 20:04:03 | ERROR | stderr | model.fp16.ckpt:   3%|█▊                                                           | 115M/3.82G [00:42<30:32, 2.02MB/s]
+2025-05-07 20:04:03 | ERROR | stderr | [A
+2025-05-07 20:04:08 | ERROR | stderr | 
+2025-05-07 20:04:08 | ERROR | stderr | 
+2025-05-07 20:04:08 | ERROR | stderr | model.fp16.safetensors:   1%|▍                                                   | 31.5M/3.82G [00:47<1:22:43, 764kB/s]
+2025-05-07 20:04:08 | ERROR | stderr | [A[A
+2025-05-07 20:04:10 | ERROR | stderr | 
+2025-05-07 20:04:10 | ERROR | stderr | model.fp16.ckpt:   3%|██                                                           | 126M/3.82G [00:49<32:45, 1.88MB/s]
+2025-05-07 20:04:10 | ERROR | stderr | [A
+2025-05-07 20:04:15 | ERROR | stderr | 
+2025-05-07 20:04:15 | ERROR | stderr | 
+2025-05-07 20:04:15 | ERROR | stderr | model.fp16.safetensors:   1%|▌                                                   | 41.9M/3.82G [00:53<1:06:25, 949kB/s]
+2025-05-07 20:04:15 | ERROR | stderr | [A[A
+2025-05-07 20:04:15 | ERROR | stderr | 
+2025-05-07 20:04:15 | ERROR | stderr | model.fp16.ckpt:   4%|██▏                                                          | 136M/3.82G [00:54<32:50, 1.87MB/s]
+2025-05-07 20:04:15 | ERROR | stderr | [A
+2025-05-07 20:04:19 | ERROR | stderr | 
+2025-05-07 20:04:19 | ERROR | stderr | model.fp16.ckpt:   4%|██▎                                                          | 147M/3.82G [00:58<29:42, 2.06MB/s]
+2025-05-07 20:04:19 | ERROR | stderr | [A
+2025-05-07 20:04:20 | ERROR | stderr | 
+2025-05-07 20:04:20 | ERROR | stderr | 
+2025-05-07 20:04:20 | ERROR | stderr | model.fp16.safetensors:   1%|▋                                                    | 52.4M/3.82G [00:59<54:18, 1.16MB/s]
+2025-05-07 20:04:20 | ERROR | stderr | [A[A
+2025-05-07 20:04:24 | ERROR | stderr | 
+2025-05-07 20:04:24 | ERROR | stderr | model.fp16.ckpt:   4%|██▌                                                          | 157M/3.82G [01:03<29:54, 2.04MB/s]
+2025-05-07 20:04:24 | ERROR | stderr | [A
+2025-05-07 20:04:28 | ERROR | stderr | 
+2025-05-07 20:04:28 | ERROR | stderr | 
+2025-05-07 20:04:28 | ERROR | stderr | model.fp16.safetensors:   2%|▊                                                    | 62.9M/3.82G [01:07<51:32, 1.22MB/s]
+2025-05-07 20:04:28 | ERROR | stderr | [A[A
+2025-05-07 20:04:29 | ERROR | stderr | 
+2025-05-07 20:04:29 | ERROR | stderr | model.fp16.ckpt:   4%|██▋                                                          | 168M/3.82G [01:08<29:04, 2.10MB/s]
+2025-05-07 20:04:29 | ERROR | stderr | [A
+2025-05-07 20:04:36 | ERROR | stderr | 
+2025-05-07 20:04:36 | ERROR | stderr | model.fp16.ckpt:   5%|██▊                                                          | 178M/3.82G [01:15<32:00, 1.90MB/s]
+2025-05-07 20:04:36 | ERROR | stderr | [A
+2025-05-07 20:04:39 | ERROR | stderr | 
+2025-05-07 20:04:39 | ERROR | stderr | 
+2025-05-07 20:04:39 | ERROR | stderr | model.fp16.safetensors:   2%|█                                                    | 73.4M/3.82G [01:18<56:01, 1.12MB/s]
+2025-05-07 20:04:39 | ERROR | stderr | [A[A
+2025-05-07 20:04:41 | ERROR | stderr | 
+2025-05-07 20:04:41 | ERROR | stderr | model.fp16.ckpt:   5%|███                                                          | 189M/3.82G [01:20<31:42, 1.91MB/s]
+2025-05-07 20:04:41 | ERROR | stderr | [A
