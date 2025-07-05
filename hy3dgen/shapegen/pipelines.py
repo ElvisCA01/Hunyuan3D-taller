@@ -92,21 +92,21 @@ def retrieve_timesteps(
 
 
 @synchronize_timer('Export to trimesh')
-def export_to_trimesh(mesh_output):
+def export_to_trimesh(mesh_output, parallel=True):
+    """Convert mesh outputs to trimesh objects with optional parallel processing."""
+    def _process_single(mesh):
+        if mesh is None:
+            return None
+        mesh.mesh_f = mesh.mesh_f[:, ::-1]  # Reverse face orientation
+        return trimesh.Trimesh(mesh.mesh_v, mesh.mesh_f)
+
     if isinstance(mesh_output, list):
-        outputs = []
-        for mesh in mesh_output:
-            if mesh is None:
-                outputs.append(None)
-            else:
-                mesh.mesh_f = mesh.mesh_f[:, ::-1]
-                mesh_output = trimesh.Trimesh(mesh.mesh_v, mesh.mesh_f)
-                outputs.append(mesh_output)
-        return outputs
-    else:
-        mesh_output.mesh_f = mesh_output.mesh_f[:, ::-1]
-        mesh_output = trimesh.Trimesh(mesh_output.mesh_v, mesh_output.mesh_f)
-        return mesh_output
+        if parallel and len(mesh_output) > 1:
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor() as executor:
+                return list(executor.map(_process_single, mesh_output))
+        return [_process_single(mesh) for mesh in mesh_output]
+    return _process_single(mesh_output)
 
 
 def get_obj_from_str(string, reload=False):
@@ -416,37 +416,47 @@ class Hunyuan3DDiTPipeline:
         self.enable_model_cpu_offload()
 
     @synchronize_timer('Encode cond')
+    # En encode_cond, usar torch.cat más eficiente
     def encode_cond(self, image, additional_cond_inputs, do_classifier_free_guidance, dual_guidance):
+        """Optimized conditioning with caching and memory-efficient concatenation."""
         bsz = image.shape[0]
-        cond = self.conditioner(image=image, **additional_cond_inputs)
+        
+        # Generate cache key
+        cache_key = (tuple(image.flatten().tolist()), frozenset(additional_cond_inputs.items()))
+        
+        if cache_key in self._cond_cache:
+            cond = self._cond_cache[cache_key]
+        else:
+            with torch.no_grad():
+                cond = self.conditioner(image=image, **additional_cond_inputs)
+            self._cond_cache[cache_key] = cond
 
-        if do_classifier_free_guidance:
+        if not do_classifier_free_guidance:
+            return cond
+
+        # Unconditional embedding with cache
+        if 'uncond' in self._uncond_cache:
+            un_cond = self._uncond_cache['uncond']
+        else:
             un_cond = self.conditioner.unconditional_embedding(bsz, **additional_cond_inputs)
+            self._uncond_cache['uncond'] = un_cond
 
-            if dual_guidance:
-                un_cond_drop_main = copy.deepcopy(un_cond)
-                un_cond_drop_main['additional'] = cond['additional']
-
-                def cat_recursive(a, b, c):
-                    if isinstance(a, torch.Tensor):
-                        return torch.cat([a, b, c], dim=0).to(self.dtype)
-                    out = {}
-                    for k in a.keys():
-                        out[k] = cat_recursive(a[k], b[k], c[k])
-                    return out
-
-                cond = cat_recursive(cond, un_cond_drop_main, un_cond)
-            else:
-                def cat_recursive(a, b):
-                    if isinstance(a, torch.Tensor):
-                        return torch.cat([a, b], dim=0).to(self.dtype)
-                    out = {}
-                    for k in a.keys():
-                        out[k] = cat_recursive(a[k], b[k])
-                    return out
-
-                cond = cat_recursive(cond, un_cond)
-        return cond
+        # Memory-efficient concatenation
+        if dual_guidance:
+            output = {}
+            for k in cond.keys():
+                combined = torch.empty((3*bsz,) + cond[k].shape[1:], 
+                                    dtype=self.dtype, 
+                                    device=cond[k].device)
+                combined[:bsz] = cond[k]
+                combined[bsz:2*bsz] = un_cond[k]
+                combined[2*bsz:] = un_cond[k]
+                if k == 'additional':
+                    combined[bsz:2*bsz] = cond[k]
+                output[k] = combined
+            return output
+        
+        return {k: torch.cat([cond[k], un_cond[k]], dim=0) for k in cond.keys()}
 
     def prepare_extra_step_kwargs(self, generator, eta):
         # prepare extra kwargs for the scheduler step, since not all schedulers have the same signature
@@ -557,63 +567,67 @@ class Hunyuan3DDiTPipeline:
         generator=None,
         box_v=1.01,
         octree_resolution=384,
-        mc_level=-1 / 512,
+        mc_level=-1/512,
         num_chunks=8000,
         mc_algo=None,
         output_type: Optional[str] = "trimesh",
         enable_pbar=True,
+        progress_callback=None,
+        callback_steps: Optional[int] = 1,
         **kwargs,
-    ) -> List[List[trimesh.Trimesh]]:
-        callback = kwargs.pop("callback", None)
-        callback_steps = kwargs.pop("callback_steps", None)
-
+    ):
+        """Optimized generation pipeline with memory management and progress tracking."""
+        # Initial setup and validation
         self.set_surface_extractor(mc_algo)
-
         device = self.device
         dtype = self.dtype
-        do_classifier_free_guidance = guidance_scale >= 0 and \
-                                      getattr(self.model, 'guidance_cond_proj_dim', None) is None
-        dual_guidance = dual_guidance_scale >= 0 and dual_guidance
-
+        
+        # Prepare inputs and conditioning
         cond_inputs = self.prepare_image(image)
-        image = cond_inputs.pop('image')
-        cond = self.encode_cond(
-            image=image,
-            additional_cond_inputs=cond_inputs,
-            do_classifier_free_guidance=do_classifier_free_guidance,
-            dual_guidance=False,
-        )
-        batch_size = image.shape[0]
+        image_tensor = cond_inputs.pop('image')
+        batch_size = image_tensor.shape[0]
 
-        t_dtype = torch.long
+        # Memory-efficient guidance setup
+        do_classifier_free_guidance = guidance_scale >= 0 and not hasattr(self.model, 'guidance_cond_proj_dim')
+        dual_guidance = dual_guidance and dual_guidance_scale >= 0
+
+        # Get timesteps
         timesteps, num_inference_steps = retrieve_timesteps(
             self.scheduler, num_inference_steps, device, timesteps, sigmas)
 
+        # Prepare latents
         latents = self.prepare_latents(batch_size, dtype, device, generator)
-        extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
+        
+        # Autocast for mixed precision
+        with torch.autocast(device_type=device.type, dtype=dtype):
+            cond = self.encode_cond(
+                image=image_tensor,
+                additional_cond_inputs=cond_inputs,
+                do_classifier_free_guidance=do_classifier_free_guidance,
+                dual_guidance=dual_guidance,
+            )
 
-        guidance_cond = None
-        if getattr(self.model, 'guidance_cond_proj_dim', None) is not None:
-            logger.info('Using lcm guidance scale')
-            guidance_scale_tensor = torch.tensor(guidance_scale - 1).repeat(batch_size)
-            guidance_cond = self.get_guidance_scale_embedding(
-                guidance_scale_tensor, embedding_dim=self.model.guidance_cond_proj_dim
-            ).to(device=device, dtype=latents.dtype)
-        with synchronize_timer('Diffusion Sampling'):
-            for i, t in enumerate(tqdm(timesteps, disable=not enable_pbar, desc="Diffusion Sampling:", leave=False)):
-                # expand the latents if we are doing classifier free guidance
-                if do_classifier_free_guidance:
-                    latent_model_input = torch.cat([latents] * (3 if dual_guidance else 2))
-                else:
-                    latent_model_input = latents
+            # Prepare guidance if needed
+            guidance_cond = None
+            if hasattr(self.model, 'guidance_cond_proj_dim'):
+                guidance_scale_tensor = torch.tensor(guidance_scale - 1).repeat(batch_size)
+                guidance_cond = self.get_guidance_scale_embedding(
+                    guidance_scale_tensor, 
+                    embedding_dim=self.model.guidance_cond_proj_dim
+                ).to(device=device, dtype=dtype)
+
+            # Diffusion sampling loop
+            pbar = tqdm(timesteps, disable=not enable_pbar, desc="Diffusion Sampling")
+            for i, t in enumerate(pbar):
+                # Expand latents for guidance
+                latent_model_input = torch.cat([latents] * (3 if dual_guidance else 2)) if do_classifier_free_guidance else latents
                 latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
 
-                # predict the noise residual
-                timestep_tensor = torch.tensor([t], dtype=t_dtype, device=device)
-                timestep_tensor = timestep_tensor.expand(latent_model_input.shape[0])
+                # Predict noise
+                timestep_tensor = t.expand(latent_model_input.shape[0])
                 noise_pred = self.model(latent_model_input, timestep_tensor, cond, guidance_cond=guidance_cond)
 
-                # no drop, drop clip, all drop
+                # Apply guidance
                 if do_classifier_free_guidance:
                     if dual_guidance:
                         noise_pred_clip, noise_pred_dino, noise_pred_uncond = noise_pred.chunk(3)
@@ -626,18 +640,24 @@ class Hunyuan3DDiTPipeline:
                         noise_pred_cond, noise_pred_uncond = noise_pred.chunk(2)
                         noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_cond - noise_pred_uncond)
 
-                # compute the previous noisy sample x_t -> x_t-1
-                outputs = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs)
-                latents = outputs.prev_sample
+                # Update latents
+                latents = self.scheduler.step(noise_pred, t, latents, eta=eta).prev_sample
 
-                if callback is not None and i % callback_steps == 0:
-                    step_idx = i // getattr(self.scheduler, "order", 1)
-                    callback(step_idx, t, outputs)
+                # Progress callback - only if callback is provided and at specified intervals
+                if progress_callback is not None and (i % callback_steps == 0 or i == len(timesteps)-1):
+                    progress_callback({
+                        'step': i,
+                        'total': len(timesteps),
+                        'latents': latents.detach().cpu(),
+                        'timestep': t.item()
+                    })
 
+        # Export results
         return self._export(
             latents,
             output_type,
             box_v, mc_level, num_chunks, octree_resolution, mc_algo,
+            enable_pbar=enable_pbar
         )
 
     def _export(
@@ -651,9 +671,32 @@ class Hunyuan3DDiTPipeline:
         mc_algo='mc',
         enable_pbar=True
     ):
-        if not output_type == "latent":
-            latents = 1. / self.vae.scale_factor * latents
-            latents = self.vae(latents)
+        """Optimized export with parallel mesh generation."""
+        if output_type == "latent":
+            return latents
+
+        # Scale and decode latents
+        latents = 1. / self.vae.scale_factor * latents
+        latents = self.vae(latents)
+
+        # Parallel mesh generation for batches
+        if latents.shape[0] > 1:
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor() as executor:
+                futures = []
+                for latent in latents:
+                    futures.append(executor.submit(
+                        self.vae.latents2mesh,
+                        latent.unsqueeze(0),
+                        bounds=box_v,
+                        mc_level=mc_level,
+                        num_chunks=num_chunks,
+                        octree_resolution=octree_resolution,
+                        mc_algo=mc_algo,
+                        enable_pbar=False
+                    ))
+                outputs = [f.result() for f in futures]
+        else:
             outputs = self.vae.latents2mesh(
                 latents,
                 bounds=box_v,
@@ -661,15 +704,10 @@ class Hunyuan3DDiTPipeline:
                 num_chunks=num_chunks,
                 octree_resolution=octree_resolution,
                 mc_algo=mc_algo,
-                enable_pbar=enable_pbar,
+                enable_pbar=enable_pbar
             )
-        else:
-            outputs = latents
 
-        if output_type == 'trimesh':
-            outputs = export_to_trimesh(outputs)
-
-        return outputs
+        return export_to_trimesh(outputs) if output_type == 'trimesh' else outputs
 
 
 class Hunyuan3DDiTFlowMatchingPipeline(Hunyuan3DDiTPipeline):
